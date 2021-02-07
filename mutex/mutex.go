@@ -202,4 +202,5 @@ func writeCurrentTimestamp(f *os.File) (int64, error) {
 		return timestamp, err
 	}
 	return timestamp, nil
+
 }

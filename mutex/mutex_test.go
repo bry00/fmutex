@@ -1,7 +1,9 @@
 package mutex
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -76,5 +78,58 @@ func TestSimpleMutexN(t *testing.T) {
 	want = 200
 	if value != want {
 		t.Fatalf("wrong value %d instead of %d", value, want)
+	}
+}
+
+func TestLockPath(t *testing.T) {
+	const mutexId = "simple-test-mutex"
+	mutexRoot := temporaryCatalog(t)
+	mx, err := NewMutex(mutexRoot, mutexId)
+	if err != nil {
+		t.Fatalf("cannot create the mutex: %v", err)
+	}
+	want := filepath.Join(mutexRoot, mutexId, fmt.Sprintf("%s-mutex.lck", mutexId))
+	got := mx.LockPath()
+
+	if want != got {
+		t.Fatalf("wrong value \"%s\" instead of \"%s\"", got, want)
+	}
+}
+
+func TestId(t *testing.T) {
+	const mutexId = "simple-test-mutex"
+	mutexRoot := temporaryCatalog(t)
+	mx, err := NewMutex(mutexRoot, mutexId)
+	if err != nil {
+		t.Fatalf("cannot create the mutex: %v", err)
+	}
+	want := mutexId
+	got := mx.Id()
+
+	if want != got {
+		t.Fatalf("wrong value \"%s\" instead of \"%s\"", got, want)
+	}
+}
+
+func TestWhen(t *testing.T) {
+	const mutexId = "simple-test-mutex"
+	mutexRoot := temporaryCatalog(t)
+	mx, err := NewMutex(mutexRoot, mutexId)
+	if err != nil {
+		t.Fatalf("cannot create the mutex: %v", err)
+	}
+	mx.Lock()
+	defer mx.Unlock()
+	if file, err := os.Create(mx.LockPath()); err != nil {
+		t.Fatalf("cannot create the mutex file: %v", err)
+	} else {
+		if want, err := writeCurrentTimestamp(file); err != nil {
+			t.Fatalf("cannot write the timestamp: %v", err)
+		} else {
+			got := mx.When().UnixNano() / int64(time.Millisecond)
+			if want != got {
+				t.Fatalf("wrong value %d instead of %d", got, want)
+			}
+		}
 	}
 }
