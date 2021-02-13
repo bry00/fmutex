@@ -2,7 +2,9 @@ package mutex
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"path"
 	"path/filepath"
 	"sync"
 	"testing"
@@ -22,13 +24,18 @@ func temporaryCatalog(t *testing.T) string {
 	return tempDir
 }
 
+func newTestMutex(root string, id string) *Mutex {
+	result, err := NewMutex(root, id)
+	if err != nil {
+		log.Fatalf("Cannot create mutex \"%s\": %v", id, err)
+	}
+	return result
+}
+
 func TestSimpleMutex(t *testing.T) {
 	const mutexId = "simple-test-mutex"
 	mutexRoot := temporaryCatalog(t)
-	mx, err := NewMutex(mutexRoot, mutexId)
-	if err != nil {
-		t.Fatalf("cannot create the mutex: %v", err)
-	}
+	mx := newTestMutex(mutexRoot, mutexId)
 	value := 0
 	mx.Lock()
 	go func(v *int) {
@@ -84,10 +91,7 @@ func TestSimpleMutexN(t *testing.T) {
 func TestLockPath(t *testing.T) {
 	const mutexId = "simple-test-mutex"
 	mutexRoot := temporaryCatalog(t)
-	mx, err := NewMutex(mutexRoot, mutexId)
-	if err != nil {
-		t.Fatalf("cannot create the mutex: %v", err)
-	}
+	mx := newTestMutex(mutexRoot, mutexId)
 	want := filepath.Join(mutexRoot, mutexId, fmt.Sprintf("%s-mutex.lck", mutexId))
 	got := mx.LockPath()
 
@@ -99,10 +103,7 @@ func TestLockPath(t *testing.T) {
 func TestId(t *testing.T) {
 	const mutexId = "simple-test-mutex"
 	mutexRoot := temporaryCatalog(t)
-	mx, err := NewMutex(mutexRoot, mutexId)
-	if err != nil {
-		t.Fatalf("cannot create the mutex: %v", err)
-	}
+	mx := newTestMutex(mutexRoot, mutexId)
 	want := mutexId
 	got := mx.Id()
 
@@ -114,10 +115,7 @@ func TestId(t *testing.T) {
 func TestWhen(t *testing.T) {
 	const mutexId = "simple-test-mutex"
 	mutexRoot := temporaryCatalog(t)
-	mx, err := NewMutex(mutexRoot, mutexId)
-	if err != nil {
-		t.Fatalf("cannot create the mutex: %v", err)
-	}
+	mx := newTestMutex(mutexRoot, mutexId)
 	mx.Lock()
 	defer mx.Unlock()
 	if file, err := os.Create(mx.LockPath()); err != nil {
@@ -130,6 +128,77 @@ func TestWhen(t *testing.T) {
 			if want != got {
 				t.Fatalf("wrong value %d instead of %d", got, want)
 			}
+		}
+	}
+}
+
+func TestTry1(t *testing.T) {
+	const mutexId = "try1-test-mutex"
+	mutexRoot := temporaryCatalog(t)
+	mx1 := newTestMutex(mutexRoot, mutexId)
+	mx1.Lock()
+	go func() {
+		defer mx1.Unlock()
+		time.Sleep(3 * time.Second)
+	}()
+	mx2 := newTestMutex(mutexRoot, mutexId)
+	defer mx2.Unlock()
+	if err := mx2.TryLock(5 * time.Second); err != nil {
+		t.Fatalf("TryLock failed (%v), but should succeed.", err)
+	}
+}
+
+func TestTry2(t *testing.T) {
+	const mutexId = "try2-test-mutex"
+	mutexRoot := temporaryCatalog(t)
+	mx1 := newTestMutex(mutexRoot, mutexId)
+	mx1.Lock()
+	go func() {
+		defer mx1.Unlock()
+		time.Sleep(3 * time.Second)
+	}()
+	mx2 := newTestMutex(mutexRoot, mutexId)
+	defer mx2.Unlock()
+	if err := mx2.TryLock(1 * time.Second); err == nil {
+		t.Fatal("TryLock succeed but should failed.")
+	}
+}
+
+func TestMutexDefaults(t *testing.T) {
+	const mutexId = "mutex-defaults"
+	mutexRoot := temporaryCatalog(t)
+	zero := time.Duration(0)
+	if mx, err := NewMutexExt(mutexRoot, mutexId, zero, zero, zero); err != nil {
+		t.Fatal(err)
+	} else {
+		expected := DefaultPulse
+		if got := mx.pulse; got != expected {
+			t.Fatalf("Wrong pulse default: got: %v, expected: %v", got, expected)
+		}
+		expected = DefaultRefresh
+		if got := mx.refresh; got != expected {
+			t.Fatalf("Wrong pulse refresh: got: %v, expected: %v", got, expected)
+		}
+	}
+}
+
+func TestMutexRoot(t *testing.T) {
+	const mutexId = "mutex-root"
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(cwd)
+	tmpdir := temporaryCatalog(t)
+	if err := os.Chdir(tmpdir); err != nil {
+		t.Fatal(err)
+	}
+	mutexRoot := "./here"
+	if mx, err := NewMutex(mutexRoot, mutexId); err != nil {
+		t.Fatal(err)
+	} else {
+		if !path.IsAbs(mx.directory) {
+			t.Fatalf("Wrong lock directory - should be absolute (%s)", mx.directory)
 		}
 	}
 }

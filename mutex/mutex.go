@@ -128,7 +128,6 @@ func NewMutex(root string, lockId string) (*Mutex, error) {
 func NewMutexExt(root string, lockId string, pulse time.Duration, refresh time.Duration, deadTimeout time.Duration) (*Mutex, error) {
 	if !filepath.IsAbs(root) {
 		var err error
-		//return nil, fmt.Errorf("root (%s) is NOT an absolute absolute path", root)
 		if root, err = filepath.Abs(root); err != nil {
 			return nil, err
 		}

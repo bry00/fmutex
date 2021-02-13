@@ -13,14 +13,14 @@ import (
 )
 
 const (
-	FLAG_ROOT    = "root"
-	ENV_ROOT     = "FMUTEX_ROOT"
-	FLAG_ID      = "id"
-	FLAG_SILENT  = "s"
-	FLAG_PULSE   = "pulse"
-	FLAG_REFRESH = "refresh"
-	FLAG_LIMIT   = "limit"
-	FLAG_TIMEOUT = "timeout"
+	FlagRoot    = "root"
+	EnvRoot     = "FMUTEX_ROOT"
+	FlagId      = "id"
+	FlagSilent  = "s"
+	FlagPulse   = "pulse"
+	FlagRefresh = "refresh"
+	FlagLimit   = "limit"
+	FlagTimeout = "timeout"
 )
 
 var cmn = struct { // Common flags
@@ -28,7 +28,7 @@ var cmn = struct { // Common flags
 	Id     string
 	Silent bool
 }{
-	Root:   ifEmptyStr(os.Getenv(ENV_ROOT), os.TempDir()),
+	Root:   ifEmptyStr(os.Getenv(EnvRoot), os.TempDir()),
 	Silent: false,
 }
 
@@ -44,10 +44,10 @@ var lck = struct { // Lock flags
 }
 
 const (
-	CMD_LOCK    = "lock"
-	CMD_RELEASE = "release"
-	CMD_UNLOCK  = "unlock" // An alias to CMD_RELEASE
-	CMD_TEST    = "test"
+	CmdLock    = "lock"
+	CmdRelease = "release"
+	CmdUnlock  = "unlock" // An alias to CmdRelease
+	CmdTest    = "test"
 )
 
 var (
@@ -63,28 +63,28 @@ func init() {
 	log.SetPrefix(fmt.Sprintf("%s: ", getProg(os.Args)))
 
 	flag.Usage = usage
-	flag.StringVar(&cmn.Root, FLAG_ROOT, cmn.Root, "root directory for mutex(es)")
-	flag.StringVar(&cmn.Id, FLAG_ID, cmn.Id, "mutex id")
-	flag.BoolVar(&cmn.Silent, FLAG_SILENT, cmn.Silent, "silent execution")
+	flag.StringVar(&cmn.Root, FlagRoot, cmn.Root, "root directory for mutex(es)")
+	flag.StringVar(&cmn.Id, FlagId, cmn.Id, "mutex id")
+	flag.BoolVar(&cmn.Silent, FlagSilent, cmn.Silent, "silent execution")
 
-	cmdLock = flag.NewFlagSet(CMD_LOCK, flag.ExitOnError)
-	cmdLock.DurationVar(&lck.Pulse, FLAG_PULSE, lck.Pulse, "determines frequency of locking attempts")
-	cmdLock.DurationVar(&lck.Refresh, FLAG_REFRESH, lck.Refresh, "determines frequency of saving current timestamp in a locking file")
-	cmdLock.DurationVar(&lck.Limit, FLAG_LIMIT, lck.Limit, "determines how long takes to consider given mutex as \"dead\"")
-	cmdLock.DurationVar(&lck.Timeout, FLAG_TIMEOUT, lck.Timeout, "locking timeout (if > 0)")
+	cmdLock = flag.NewFlagSet(CmdLock, flag.ExitOnError)
+	cmdLock.DurationVar(&lck.Pulse, FlagPulse, lck.Pulse, "determines frequency of locking attempts")
+	cmdLock.DurationVar(&lck.Refresh, FlagRefresh, lck.Refresh, "determines frequency of saving current timestamp in a locking file")
+	cmdLock.DurationVar(&lck.Limit, FlagLimit, lck.Limit, "determines how long takes to consider given mutex as \"dead\"")
+	cmdLock.DurationVar(&lck.Timeout, FlagTimeout, lck.Timeout, "locking timeout (if > 0)")
 
-	cmdRelease = flag.NewFlagSet(CMD_RELEASE, flag.ExitOnError)
-	cmdTest = flag.NewFlagSet(CMD_TEST, flag.ExitOnError)
+	cmdRelease = flag.NewFlagSet(CmdRelease, flag.ExitOnError)
+	cmdTest = flag.NewFlagSet(CmdTest, flag.ExitOnError)
 
 	cmdAll, cmdNames = mkCommands(cmdLock, cmdRelease, cmdTest)
 
-	flag.Parse()
 }
 
 func main() {
+	flag.Parse()
 
 	if isEmptyStr(cmn.Id) {
-		log.Fatalf("Flag -%s is required.", FLAG_ID)
+		log.Fatalf("Flag -%s is required.", FlagId)
 	}
 
 	if flag.NArg() < 1 {
@@ -95,19 +95,19 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 	switch flag.Arg(0) {
-	case CMD_LOCK:
+	case CmdLock:
 		cmdLock.Parse(flag.Args()[1:])
 		doLock()
 		if !cmn.Silent {
 			fmt.Println("LOCKED")
 		}
-	case CMD_RELEASE, CMD_UNLOCK:
+	case CmdRelease, CmdUnlock:
 		cmdRelease.Parse(flag.Args()[1:])
 		doUnlock()
 		if !cmn.Silent {
 			fmt.Println("RELEASED")
 		}
-	case CMD_TEST:
+	case CmdTest:
 		cmdTest.Parse(flag.Args()[1:])
 		os.Exit(doTest())
 
@@ -146,7 +146,7 @@ func doUnlock() {
 func newMutex() *mutex.Mutex {
 	result, err := mutex.NewMutexExt(cmn.Root, cmn.Id, lck.Pulse, lck.Refresh, lck.Limit)
 	if err != nil {
-		log.Fatalf("Cannot create mutex \"%s\": %v", result.Id(), err)
+		log.Fatalf("Cannot create mutex \"%s\": %v", cmn.Id, err)
 	}
 	return result
 }
