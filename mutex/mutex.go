@@ -1,3 +1,7 @@
+// Package mutext is designated to provide simple mutex locking
+// based on filesystem hard links functionality.
+// Given filesystem link function must fail, if target file already exists,
+// which is true for the Linux and MacOS platforms.
 package mutex
 
 import (

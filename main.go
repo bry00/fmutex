@@ -3,13 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
-	mutex "github.com/bry00/fmutex/mutex"
 	"io/ioutil"
 	"log"
 	"os"
 	"path"
 	"strings"
 	"time"
+
+	"github.com/bry00/fmutex/mutex"
 )
 
 const (
