@@ -36,7 +36,7 @@ const MUTEX_ID = "sample-mutex"
 const MUTEX_ROOT := "/tmp"
 
 func main() {
-	mx, err := mutex.NewMutex(mutexRoot, mutexId)
+	mx, err := mutex.NewMutex(MUTEX_ROOT, MUTEX_ID)
 	if err != nil {
 		log.Fatalf("cannot create the mutex: %v", err)
 	}
